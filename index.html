@@ -3,108 +3,113 @@
 <head>
     <meta charset="UTF-8">
     <style>
-        :root { --gold: #d4af37; --jjk-red: #bc061e; }
-        body { background: transparent; font-family: 'Segoe UI', sans-serif; color: white; margin: 0; padding: 10px; }
+        :root { 
+            --gold: #d4af37; 
+            --jjk-red: #ff4d4d; 
+            --blue: #4d94ff; 
+            --soul: #9933ff; 
+        }
+        body { background: transparent; font-family: 'Courier New', Courier, monospace; color: white; margin: 0; padding: 10px; }
         
-        /* --- ESTILO DO HUD (OBS) --- */
-        .hud-card { width: 220px; display: none; }
-        .portrait-frame { 
+        /* HUD VISUAL (NÚMEROS APENAS) */
+        .hud-card { width: 220px; display: none; filter: drop-shadow(2px 2px 5px black); }
+        
+        .frame { 
             width: 180px; height: 180px; 
             border: 4px solid var(--gold); 
-            background: white; /* Fundo branco solicitado */
-            overflow: hidden; margin-bottom: 8px;
-            box-shadow: 0 0 15px rgba(0,0,0,0.5);
+            background: white; 
+            overflow: hidden; 
         }
-        .portrait-frame img { width: 100%; height: 100%; object-fit: cover; }
-        .name-tag { font-size: 20px; font-weight: bold; text-transform: uppercase; color: white; text-shadow: 2px 2px 0 #000; }
-        .bar-container { background: #111; height: 12px; border: 1px solid #333; margin: 4px 0; }
-        .bar-fill { height: 100%; transition: width 0.4s ease-out; }
-        .hp { background: var(--jjk-red); }
-        .pe { background: #1e88e5; }
-        .ia { background: #7b1fa2; }
-        .label { font-size: 11px; font-weight: bold; display: flex; justify-content: space-between; }
+        .frame img { width: 100%; height: 100%; object-fit: cover; }
+        
+        .name-tag { 
+            font-size: 20px; font-weight: bold; background: black; 
+            display: inline-block; padding: 2px 10px; margin-top: -10px; 
+            border: 2px solid var(--gold); position: relative; z-index: 5;
+        }
 
-        /* --- PAINEL DE CONTROLE --- */
-        #admin-panel { background: #1a1a1a; border: 2px solid var(--gold); padding: 15px; width: 350px; display: none; }
-        .admin-row { border-bottom: 1px solid #333; padding: 10px 0; }
-        input[type="number"] { width: 45px; background: #333; color: white; border: 1px solid var(--gold); }
+        /* ÁREA DOS NÚMEROS */
+        .stats-numbers { margin-top: 10px; font-weight: bold; font-size: 18px; }
+        .stat-line { margin: 5px 0; display: flex; align-items: center; }
+        
+        .label-pv { color: var(--jjk-red); margin-right: 8px; }
+        .label-pe { color: var(--blue); margin-right: 8px; }
+        .label-ia { color: var(--soul); margin-right: 8px; }
+
+        /* PAINEL MESTRE */
+        #admin { background: #111; border: 2px solid var(--gold); padding: 15px; width: 450px; display: none; }
+        .char-row { border-bottom: 1px solid #333; padding: 10px 0; font-size: 14px; }
+        input { background: #222; color: white; border: 1px solid var(--gold); width: 45px; margin: 0 5px; }
     </style>
 </head>
 <body>
 
     <div id="hud" class="hud-card">
-        <div class="portrait-frame"><img id="view-img" src=""></div>
+        <div class="frame"><img id="view-img" src=""></div>
         <div class="name-tag" id="view-name">NOME</div>
-        <div class="label"><span>HP</span> <span id="txt-hp">0/0</span></div>
-        <div class="bar-container"><div id="bar-hp" class="bar-fill hp"></div></div>
-        <div class="label"><span>PE</span> <span id="txt-pe">0/0</span></div>
-        <div class="bar-container"><div id="bar-pe" class="bar-fill pe"></div></div>
-        <div id="soul-section" style="display:none">
-            <div class="label"><span>ALMA</span> <span id="txt-ia">0/0</span></div>
-            <div class="bar-container"><div id="bar-ia" class="bar-fill ia"></div></div>
+        
+        <div class="stats-numbers">
+            <div class="stat-line"><span class="label-pv">PV:</span> <span id="val-hp">0/0</span></div>
+            <div class="stat-line"><span class="label-pe">PE:</span> <span id="val-pe">0/0</span></div>
+            <div id="soul-box" style="display:none">
+                <div class="stat-line"><span class="label-ia">ALMA:</span> <span id="val-ia">0/0</span></div>
+            </div>
         </div>
     </div>
 
-    <div id="admin-panel">
-        <h3 style="color:var(--gold); margin-top:0;">MESTRE - JUJUTSU HUD</h3>
-        <div id="controls"></div>
+    <div id="admin">
+        <h3 style="color:var(--gold); margin-top:0;">MESTRE - CONTROLE DE STATUS</h3>
+        <div id="mestre-lista"></div>
     </div>
 
     <script>
-        const bc = new BroadcastChannel('jjk_rpg_sync');
-        const charNames = ["Saito", "Fokushi", "Shigai", "Umi", "Mitsuya", "Shido"];
+        const bc = new BroadcastChannel('jjk_sync');
+        const names = ["Saito", "Fokushi", "Shigai", "Umi", "Mitsuya", "Shido"];
         const params = new URLSearchParams(window.location.search);
         const charId = params.get('char');
-        const isAdmin = params.get('mode') === 'admin';
+        const mode = params.get('mode');
 
-        // Banco de dados inicial (na memória do navegador)
-        let gameState = JSON.parse(localStorage.getItem('jjk_save')) || {};
-        charNames.forEach(n => {
-            if(!gameState[n]) gameState[n] = { hp:10, hpM:10, pe:5, peM:5, ia:10, iaM:10, showIA:false, img:'' };
-        });
+        let data = JSON.parse(localStorage.getItem('rpg_save')) || {};
+        names.forEach(n => { if(!data[n]) data[n] = {hp:10, hpM:10, pe:5, peM:5, ia:10, iaM:10, sIA:false, img:''}; });
 
-        function render() {
-            if(isAdmin) {
-                document.getElementById('admin-panel').style.display = 'block';
-                let html = '';
-                charNames.forEach(n => {
-                    const d = gameState[n];
-                    html += `<div class="admin-row">
-                        <b>${n}</b><br>
-                        HP: <input type="number" value="${d.hp}" onchange="update('${n}','hp',this.value)">/
-                            <input type="number" value="${d.hpM}" onchange="update('${n}','hpM',this.value)"> | 
-                        PE: <input type="number" value="${d.pe}" onchange="update('${n}','pe',this.value)"> |
-                        IA: <input type="checkbox" ${d.showIA?'checked':''} onchange="update('${n}','showIA',this.checked)">
+        function draw() {
+            if(mode === 'admin') {
+                document.getElementById('admin').style.display = 'block';
+                let h = '';
+                names.forEach(n => {
+                    const d = data[n];
+                    h += `<div class="char-row">
+                        <b>${n}</b> | PV: <input type="number" value="${d.hp}" onchange="up('${n}','hp',this.value)">/
+                        <input type="number" value="${d.hpM}" onchange="up('${n}','hpM',this.value)"> | 
+                        PE: <input type="number" value="${d.pe}" onchange="up('${n}','pe',this.value)"> | 
+                        ALMA: <input type="checkbox" ${d.sIA?'checked':''} onchange="up('${n}','sIA',this.checked)"> | 
+                        IMG: <input type="text" style="width:80px" value="${d.img}" onchange="up('${n}','img',this.value)">
                     </div>`;
                 });
-                document.getElementById('controls').innerHTML = html;
+                document.getElementById('mestre-lista').innerHTML = h;
             }
 
-            if(charId && gameState[charId]) {
-                const d = gameState[charId];
+            if(charId && data[charId]) {
+                const s = data[charId];
                 document.getElementById('hud').style.display = 'block';
                 document.getElementById('view-name').innerText = charId;
-                document.getElementById('txt-hp').innerText = `${d.hp}/${d.hpM}`;
-                document.getElementById('bar-hp').style.width = (d.hp/d.hpM*100)+'%';
-                document.getElementById('txt-pe').innerText = `${d.pe}/${d.peM}`;
-                document.getElementById('bar-pe').style.width = (d.pe/d.peM*100)+'%';
-                document.getElementById('soul-section').style.display = d.showIA ? 'block' : 'none';
-                if(d.showIA) {
-                    document.getElementById('txt-ia').innerText = `${d.ia}/${d.iaM}`;
-                    document.getElementById('bar-ia').style.width = (d.ia/d.iaM*100)+'%';
-                }
+                document.getElementById('view-img').src = s.img || 'https://via.placeholder.com/180?text=FOTO';
+                document.getElementById('val-hp').innerText = `${s.hp}/${s.hpM}`;
+                document.getElementById('val-pe').innerText = `${s.pe}/${s.peM}`;
+                document.getElementById('soul-box').style.display = s.sIA ? 'block' : 'none';
+                if(s.sIA) document.getElementById('val-ia').innerText = `${s.ia}/${s.iaM}`;
             }
         }
 
-        function update(name, field, val) {
-            gameState[name][field] = (field === 'showIA') ? val : parseInt(val);
-            localStorage.setItem('jjk_save', JSON.stringify(gameState));
-            bc.postMessage(gameState);
-            render();
+        function up(n, f, v) {
+            data[n][f] = (f === 'sIA') ? v : (f === 'img' ? v : parseInt(v));
+            localStorage.setItem('rpg_save', JSON.stringify(data));
+            bc.postMessage(data);
+            draw();
         }
 
-        bc.onmessage = (ev) => { gameState = ev.data; render(); };
-        render();
+        bc.onmessage = (e) => { data = e.data; draw(); };
+        draw();
     </script>
 </body>
 </html>
