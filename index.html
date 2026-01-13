@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <style>
+        :root { --gold: #d4af37; --jjk-red: #bc061e; }
+        body { background: transparent; font-family: 'Segoe UI', sans-serif; color: white; margin: 0; padding: 10px; }
+        
+        /* --- ESTILO DO HUD (OBS) --- */
+        .hud-card { width: 220px; display: none; }
+        .portrait-frame { 
+            width: 180px; height: 180px; 
+            border: 4px solid var(--gold); 
+            background: white; /* Fundo branco solicitado */
+            overflow: hidden; margin-bottom: 8px;
+            box-shadow: 0 0 15px rgba(0,0,0,0.5);
+        }
+        .portrait-frame img { width: 100%; height: 100%; object-fit: cover; }
+        .name-tag { font-size: 20px; font-weight: bold; text-transform: uppercase; color: white; text-shadow: 2px 2px 0 #000; }
+        .bar-container { background: #111; height: 12px; border: 1px solid #333; margin: 4px 0; }
+        .bar-fill { height: 100%; transition: width 0.4s ease-out; }
+        .hp { background: var(--jjk-red); }
+        .pe { background: #1e88e5; }
+        .ia { background: #7b1fa2; }
+        .label { font-size: 11px; font-weight: bold; display: flex; justify-content: space-between; }
+
+        /* --- PAINEL DE CONTROLE --- */
+        #admin-panel { background: #1a1a1a; border: 2px solid var(--gold); padding: 15px; width: 350px; display: none; }
+        .admin-row { border-bottom: 1px solid #333; padding: 10px 0; }
+        input[type="number"] { width: 45px; background: #333; color: white; border: 1px solid var(--gold); }
+    </style>
+</head>
+<body>
+
+    <div id="hud" class="hud-card">
+        <div class="portrait-frame"><img id="view-img" src=""></div>
+        <div class="name-tag" id="view-name">NOME</div>
+        <div class="label"><span>HP</span> <span id="txt-hp">0/0</span></div>
+        <div class="bar-container"><div id="bar-hp" class="bar-fill hp"></div></div>
+        <div class="label"><span>PE</span> <span id="txt-pe">0/0</span></div>
+        <div class="bar-container"><div id="bar-pe" class="bar-fill pe"></div></div>
+        <div id="soul-section" style="display:none">
+            <div class="label"><span>ALMA</span> <span id="txt-ia">0/0</span></div>
+            <div class="bar-container"><div id="bar-ia" class="bar-fill ia"></div></div>
+        </div>
+    </div>
+
+    <div id="admin-panel">
+        <h3 style="color:var(--gold); margin-top:0;">MESTRE - JUJUTSU HUD</h3>
+        <div id="controls"></div>
+    </div>
+
+    <script>
+        const bc = new BroadcastChannel('jjk_rpg_sync');
+        const charNames = ["Saito", "Fokushi", "Shigai", "Umi", "Mitsuya", "Shido"];
+        const params = new URLSearchParams(window.location.search);
+        const charId = params.get('char');
+        const isAdmin = params.get('mode') === 'admin';
+
+        // Banco de dados inicial (na memória do navegador)
+        let gameState = JSON.parse(localStorage.getItem('jjk_save')) || {};
+        charNames.forEach(n => {
+            if(!gameState[n]) gameState[n] = { hp:10, hpM:10, pe:5, peM:5, ia:10, iaM:10, showIA:false, img:'' };
+        });
+
+        function render() {
+            if(isAdmin) {
+                document.getElementById('admin-panel').style.display = 'block';
+                let html = '';
+                charNames.forEach(n => {
+                    const d = gameState[n];
+                    html += `<div class="admin-row">
+                        <b>${n}</b><br>
+                        HP: <input type="number" value="${d.hp}" onchange="update('${n}','hp',this.value)">/
+                            <input type="number" value="${d.hpM}" onchange="update('${n}','hpM',this.value)"> | 
+                        PE: <input type="number" value="${d.pe}" onchange="update('${n}','pe',this.value)"> |
+                        IA: <input type="checkbox" ${d.showIA?'checked':''} onchange="update('${n}','showIA',this.checked)">
+                    </div>`;
+                });
+                document.getElementById('controls').innerHTML = html;
+            }
+
+            if(charId && gameState[charId]) {
+                const d = gameState[charId];
+                document.getElementById('hud').style.display = 'block';
+                document.getElementById('view-name').innerText = charId;
+                document.getElementById('txt-hp').innerText = `${d.hp}/${d.hpM}`;
+                document.getElementById('bar-hp').style.width = (d.hp/d.hpM*100)+'%';
+                document.getElementById('txt-pe').innerText = `${d.pe}/${d.peM}`;
+                document.getElementById('bar-pe').style.width = (d.pe/d.peM*100)+'%';
+                document.getElementById('soul-section').style.display = d.showIA ? 'block' : 'none';
+                if(d.showIA) {
+                    document.getElementById('txt-ia').innerText = `${d.ia}/${d.iaM}`;
+                    document.getElementById('bar-ia').style.width = (d.ia/d.iaM*100)+'%';
+                }
+            }
+        }
+
+        function update(name, field, val) {
+            gameState[name][field] = (field === 'showIA') ? val : parseInt(val);
+            localStorage.setItem('jjk_save', JSON.stringify(gameState));
+            bc.postMessage(gameState);
+            render();
+        }
+
+        bc.onmessage = (ev) => { gameState = ev.data; render(); };
+        render();
+    </script>
+</body>
+</html>
