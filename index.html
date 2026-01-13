@@ -4,61 +4,49 @@
     <meta charset="UTF-8">
     <style>
         :root { 
-            --gold: #d4af37; 
-            --jjk-red: #ff4d4d; 
-            --blue: #4d94ff; 
-            --soul: #9933ff; 
+            --pv-red: #ff4d4d; 
+            --pe-blue: #4d94ff; 
+            --ia-purple: #9933ff; 
         }
-        body { background: transparent; font-family: 'Courier New', Courier, monospace; color: white; margin: 0; padding: 10px; }
+        /* Fundo transparente para o OBS */
+        body { background: transparent; font-family: 'Courier New', Courier, monospace; color: white; margin: 0; padding: 5px; }
         
-        /* HUD VISUAL (NÚMEROS APENAS) */
-        .hud-card { width: 220px; display: none; filter: drop-shadow(2px 2px 5px black); }
-        
-        .frame { 
-            width: 180px; height: 180px; 
-            border: 4px solid var(--gold); 
-            background: white; 
-            overflow: hidden; 
-        }
-        .frame img { width: 100%; height: 100%; object-fit: cover; }
-        
-        .name-tag { 
-            font-size: 20px; font-weight: bold; background: black; 
-            display: inline-block; padding: 2px 10px; margin-top: -10px; 
-            border: 2px solid var(--gold); position: relative; z-index: 5;
+        /* HUD APENAS NÚMEROS */
+        .hud-minimal { 
+            display: none; 
+            filter: drop-shadow(2px 2px 3px black); /* Sombra para ler melhor sobre o mapa */
+            line-height: 1.2;
         }
 
-        /* ÁREA DOS NÚMEROS */
-        .stats-numbers { margin-top: 10px; font-weight: bold; font-size: 18px; }
-        .stat-line { margin: 5px 0; display: flex; align-items: center; }
+        .stat-line { 
+            font-size: 22px; 
+            font-weight: bold; 
+            margin-bottom: 2px;
+            white-space: nowrap;
+        }
         
-        .label-pv { color: var(--jjk-red); margin-right: 8px; }
-        .label-pe { color: var(--blue); margin-right: 8px; }
-        .label-ia { color: var(--soul); margin-right: 8px; }
+        .label-pv { color: var(--pv-red); }
+        .label-pe { color: var(--pe-blue); }
+        .label-ia { color: var(--ia-purple); }
 
-        /* PAINEL MESTRE */
-        #admin { background: #111; border: 2px solid var(--gold); padding: 15px; width: 450px; display: none; }
+        /* PAINEL MESTRE (MANTIDO PARA CONTROLE) */
+        #admin { background: #111; border: 2px solid #d4af37; padding: 15px; width: 450px; display: none; color: white; }
         .char-row { border-bottom: 1px solid #333; padding: 10px 0; font-size: 14px; }
-        input { background: #222; color: white; border: 1px solid var(--gold); width: 45px; margin: 0 5px; }
+        input { background: #222; color: white; border: 1px solid #d4af37; width: 45px; margin: 0 5px; }
     </style>
 </head>
 <body>
 
-    <div id="hud" class="hud-card">
-        <div class="frame"><img id="view-img" src=""></div>
-        <div class="name-tag" id="view-name">NOME</div>
-        
-        <div class="stats-numbers">
-            <div class="stat-line"><span class="label-pv">PV:</span> <span id="val-hp">0/0</span></div>
-            <div class="stat-line"><span class="label-pe">PE:</span> <span id="val-pe">0/0</span></div>
-            <div id="soul-box" style="display:none">
-                <div class="stat-line"><span class="label-ia">ALMA:</span> <span id="val-ia">0/0</span></div>
-            </div>
+    <div id="hud" class="hud-minimal">
+        <div class="stat-line"><span class="label-pv">PV:</span> <span id="val-hp">0/0</span></div>
+        <div class="stat-line"><span class="label-pe">PE:</span> <span id="val-pe">0/0</span></div>
+        <div id="soul-box" style="display:none">
+            <div class="stat-line"><span class="label-ia">ALMA:</span> <span id="val-ia">0/0</span></div>
         </div>
     </div>
 
     <div id="admin">
-        <h3 style="color:var(--gold); margin-top:0;">MESTRE - CONTROLE DE STATUS</h3>
+        <h3 style="color:#d4af37; margin-top:0;">MESTRE - CONTROLE DE STATUS</h3>
         <div id="mestre-lista"></div>
     </div>
 
@@ -70,7 +58,7 @@
         const mode = params.get('mode');
 
         let data = JSON.parse(localStorage.getItem('rpg_save')) || {};
-        names.forEach(n => { if(!data[n]) data[n] = {hp:10, hpM:10, pe:5, peM:5, ia:10, iaM:10, sIA:false, img:''}; });
+        names.forEach(n => { if(!data[n]) data[n] = {hp:10, hpM:10, pe:5, peM:5, ia:10, iaM:10, sIA:false}; });
 
         function draw() {
             if(mode === 'admin') {
@@ -82,8 +70,7 @@
                         <b>${n}</b> | PV: <input type="number" value="${d.hp}" onchange="up('${n}','hp',this.value)">/
                         <input type="number" value="${d.hpM}" onchange="up('${n}','hpM',this.value)"> | 
                         PE: <input type="number" value="${d.pe}" onchange="up('${n}','pe',this.value)"> | 
-                        ALMA: <input type="checkbox" ${d.sIA?'checked':''} onchange="up('${n}','sIA',this.checked)"> | 
-                        IMG: <input type="text" style="width:80px" value="${d.img}" onchange="up('${n}','img',this.value)">
+                        ALMA: <input type="checkbox" ${d.sIA?'checked':''} onchange="up('${n}','sIA',this.checked)">
                     </div>`;
                 });
                 document.getElementById('mestre-lista').innerHTML = h;
@@ -92,8 +79,6 @@
             if(charId && data[charId]) {
                 const s = data[charId];
                 document.getElementById('hud').style.display = 'block';
-                document.getElementById('view-name').innerText = charId;
-                document.getElementById('view-img').src = s.img || 'https://via.placeholder.com/180?text=FOTO';
                 document.getElementById('val-hp').innerText = `${s.hp}/${s.hpM}`;
                 document.getElementById('val-pe').innerText = `${s.pe}/${s.peM}`;
                 document.getElementById('soul-box').style.display = s.sIA ? 'block' : 'none';
@@ -102,7 +87,7 @@
         }
 
         function up(n, f, v) {
-            data[n][f] = (f === 'sIA') ? v : (f === 'img' ? v : parseInt(v));
+            data[n][f] = (f === 'sIA') ? v : parseInt(v);
             localStorage.setItem('rpg_save', JSON.stringify(data));
             bc.postMessage(data);
             draw();
