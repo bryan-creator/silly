@@ -2,21 +2,20 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>JJK RPG Sync</title>
     <style>
         :root { --pv: #ff4d4d; --pe: #4d94ff; --ia: #9933ff; --gold: #d4af37; }
         body { background: transparent; font-family: 'Courier New', Courier, monospace; color: white; margin: 0; padding: 10px; }
         
-        /* HUD OBS */
+        /* HUD OBS - APENAS NÚMEROS */
         #hud { display: none; filter: drop-shadow(2px 2px 4px black); }
-        .stat-line { font-size: 30px; font-weight: bold; margin-bottom: 5px; }
+        .stat-line { font-size: 32px; font-weight: bold; margin-bottom: 5px; }
         .label-pv { color: var(--pv); } .label-pe { color: var(--pe); } .label-ia { color: var(--ia); }
 
         /* PAINEL MESTRE */
         #admin { background: #111; border: 3px solid var(--gold); padding: 20px; width: 620px; display: none; color: white; border-radius: 8px; }
         .char-row { border-bottom: 1px solid #333; padding: 10px 0; display: flex; align-items: center; justify-content: space-between; }
-        input[type="number"] { background: #222; color: white; border: 1px solid var(--gold); width: 55px; padding: 5px; text-align: center; }
-        .status-sync { font-size: 10px; color: #888; margin-top: 5px; }
+        input[type="number"] { background: #222; color: white; border: 1px solid var(--gold); width: 60px; padding: 5px; text-align: center; font-size: 16px; }
+        b { color: var(--gold); width: 100px; display: inline-block; }
     </style>
 </head>
 <body>
@@ -30,58 +29,35 @@
     </div>
 
     <div id="admin">
-        <h2 style="color:var(--gold); margin:0 0 10px 0;">PAINEL DE CONTROLE</h2>
+        <h2 style="color:var(--gold); margin:0 0 10px 0;">PAINEL DE CONTROLE JJK</h2>
         <div id="mestre-lista"></div>
-        <div class="status-sync" id="sync-info">Iniciando sistema...</div>
+        <button onclick="resetaTudo()" style="margin-top:15px; background:red; color:white; border:none; padding:5px; cursor:pointer;">RESETAR TUDO (10/10)</button>
     </div>
 
     <script>
-        // ID ÚNICO PARA SUA SALA (Pode mudar se quiser criar outra sala)
-        const SALA_ID = "bryan_jjk_2026_room"; 
-        const API_URL = `https://api.keyvalue.xyz/69b2759d/${SALA_ID}`;
-
         const names = ["Saito", "Fokushi", "Shigai", "Umi", "Mitsuya", "Shido"];
         const params = new URLSearchParams(window.location.search);
         const charId = params.get('char');
         const isMestre = params.get('mode') === 'admin';
 
-        // 1. DADOS INICIAIS (Para não ficar em branco)
-        let gameState = {};
-        names.forEach(n => {
-            gameState[n] = { hp: 10, hpM: 10, pe: 5, ia: 10, iaM: 10, sIA: false };
-        });
-
-        // 2. MOSTRAR A INTERFACE IMEDIATAMENTE
-        function initUI() {
-            if (isMestre) {
-                document.getElementById('admin').style.display = 'block';
-                renderAdmin();
-            }
-            if (charId) {
-                document.getElementById('hud').style.display = 'block';
-                updateHUD();
-            }
+        // 1. CARREGAR DADOS (Busca o que está salvo ou cria novos)
+        function loadData() {
+            const saved = localStorage.getItem('rpg_data_jjk');
+            if (saved) return JSON.parse(saved);
+            
+            let initial = {};
+            names.forEach(n => { initial[n] = { hp: 10, hpM: 10, pe: 5, ia: 10, iaM: 10, sIA: false }; });
+            return initial;
         }
 
-        function renderAdmin() {
-            let h = '';
-            names.forEach(n => {
-                const d = gameState[n];
-                h += `<div class="char-row">
-                    <b style="width:80px">${n}</b>
-                    <div>PV <input type="number" id="hp-${n}" value="${d.hp}" oninput="change('${n}')">/
-                           <input type="number" id="hpM-${n}" value="${d.hpM}" oninput="change('${n}')"></div>
-                    <div>PE <input type="number" id="pe-${n}" value="${d.pe}" oninput="change('${n}')"></div>
-                    <div>IA <input type="number" id="ia-${n}" value="${d.ia}" oninput="change('${n}')">
-                         <input type="checkbox" id="sIA-${n}" ${d.sIA?'checked':''} onchange="change('${n}')"></div>
-                </div>`;
-            });
-            document.getElementById('mestre-lista').innerHTML = h;
-        }
+        let gameState = loadData();
 
-        function updateHUD() {
+        // 2. ATUALIZAR A TELA
+        function refreshUI() {
+            gameState = loadData(); // Recarrega do banco local
             if (charId && gameState[charId]) {
                 const s = gameState[charId];
+                document.getElementById('hud').style.display = 'block';
                 document.getElementById('val-hp').innerText = `${s.hp}/${s.hpM}`;
                 document.getElementById('val-pe').innerText = `${s.pe}`;
                 document.getElementById('soul-box').style.display = s.sIA ? 'block' : 'none';
@@ -89,28 +65,27 @@
             }
         }
 
-        // 3. SINCRONIA COM A NUVEM
-        async function cloudSave() {
-            try {
-                await fetch(API_URL, { method: 'POST', body: JSON.stringify(gameState) });
-                document.getElementById('sync-info').innerText = "Nuvem: Sincronizado às " + new Date().toLocaleTimeString();
-            } catch (e) { document.getElementById('sync-info').innerText = "Nuvem: Erro ao salvar..."; }
+        // 3. DESENHAR O PAINEL DO MESTRE
+        function renderAdmin() {
+            if (!isMestre) return;
+            document.getElementById('admin').style.display = 'block';
+            let html = '';
+            names.forEach(n => {
+                const d = gameState[n];
+                html += `<div class="char-row">
+                    <b>${n}</b>
+                    <div>PV <input type="number" id="hp-${n}" value="${d.hp}" oninput="save('${n}')">/
+                           <input type="number" id="hpM-${n}" value="${d.hpM}" oninput="save('${n}')"></div>
+                    <div>PE <input type="number" id="pe-${n}" value="${d.pe}" oninput="save('${n}')"></div>
+                    <div>IA <input type="number" id="ia-${n}" value="${d.ia}" oninput="save('${n}')">
+                         <input type="checkbox" id="sIA-${n}" ${d.sIA?'checked':''} onchange="save('${n}')"></div>
+                </div>`;
+            });
+            document.getElementById('mestre-lista').innerHTML = html;
         }
 
-        async function cloudLoad() {
-            try {
-                const res = await fetch(API_URL);
-                if (res.ok) {
-                    const data = await res.json();
-                    if (data && typeof data === 'object') {
-                        gameState = data;
-                        if (!isMestre) updateHUD(); // HUD só atualiza se não for o mestre editando
-                    }
-                }
-            } catch (e) { console.log("Erro no load"); }
-        }
-
-        function change(n) {
+        // 4. SALVAR DADOS
+        function save(n) {
             gameState[n] = {
                 hp: parseInt(document.getElementById(`hp-${n}`).value) || 0,
                 hpM: parseInt(document.getElementById(`hpM-${n}`).value) || 0,
@@ -119,13 +94,29 @@
                 iaM: 10,
                 sIA: document.getElementById(`sIA-${n}`).checked
             };
-            cloudSave();
-            updateHUD();
+            localStorage.setItem('rpg_data_jjk', JSON.stringify(gameState));
+            
+            // Avisa outras abas (Opera/Chrome)
+            window.dispatchEvent(new Event('storage')); 
         }
 
-        // INICIALIZAÇÃO
-        initUI();
-        setInterval(cloudLoad, 1500); // Checa a nuvem a cada 1.5s
+        function resetaTudo() {
+            localStorage.removeItem('rpg_data_jjk');
+            location.reload();
+        }
+
+        // 5. SINCRONIA MÁGICA (Ouvinte de abas)
+        window.addEventListener('storage', () => {
+            refreshUI();
+        });
+
+        // Inicialização
+        refreshUI();
+        renderAdmin();
+        
+        // Backup: Força atualização a cada 1 segundo caso o evento falhe
+        setInterval(refreshUI, 1000);
     </script>
 </body>
 </html>
+
