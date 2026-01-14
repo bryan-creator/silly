@@ -2,132 +2,37 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link href="https://fonts.googleapis.com/css2?family=Special+Elite&family=Inter:wght@400;700&display=swap" rel="stylesheet">
     <style>
         :root { 
-            --pv: #ff4d4d; 
-            --pe: #4d94ff; 
-            --ia: #9933ff; 
-            --gold: #d4af37;
-            --bg-dark: #0b0b0b;
+            --pv: #ff4d4d; --pe: #4d94ff; --ia: #9933ff; --gold: #d4af37;
             --panel-bg: #161616;
         }
 
-        body { 
-            background: transparent; 
-            font-family: 'Inter', sans-serif; 
-            color: white; 
-            margin: 0; 
-            padding: 10px; 
-        }
+        body { background: transparent; font-family: 'Inter', sans-serif; color: white; margin: 0; padding: 10px; }
 
-        /* --- ESTILO DO HUD (OBS) --- */
-        #hud { 
-            display: none; 
-            filter: drop-shadow(0 0 8px rgba(0,0,0,0.9));
-            border-left: 4px solid var(--gold);
-            padding-left: 15px;
-        }
+        /* HUD OBS */
+        #hud { display: none; filter: drop-shadow(0 0 8px rgba(0,0,0,0.9)); border-left: 4px solid var(--gold); padding-left: 15px; }
+        .hud-line { font-family: 'Special Elite', cursive; font-size: 28px; font-weight: bold; margin-bottom: 2px; text-transform: uppercase; }
+        .label-pv { color: var(--pv); } .label-pe { color: var(--pe); } .label-ia { color: var(--ia); }
 
-        .hud-line { 
-            font-family: 'Special Elite', cursive;
-            font-size: 28px; 
-            font-weight: bold; 
-            margin-bottom: 2px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
+        /* PAINEL DO MESTRE */
+        #admin { background: var(--panel-bg); border: 2px solid var(--gold); padding: 25px; width: 850px; display: none; border-radius: 4px; }
+        .admin-header { font-family: 'Special Elite', cursive; color: var(--gold); text-align: center; border-bottom: 1px solid var(--gold); margin-bottom: 20px; padding-bottom: 10px; font-size: 24px; }
 
-        .label-pv { color: var(--pv); text-shadow: 0 0 10px rgba(255, 77, 77, 0.3); }
-        .label-pe { color: var(--pe); text-shadow: 0 0 10px rgba(77, 148, 255, 0.3); }
-        .label-ia { color: var(--ia); text-shadow: 0 0 10px rgba(153, 51, 255, 0.3); }
-
-        /* --- PAINEL DO MESTRE --- */
-        #admin { 
-            background: var(--panel-bg); 
-            border: 2px solid var(--gold); 
-            padding: 25px; 
-            width: 850px; 
-            display: none; 
-            border-radius: 4px;
-            box-shadow: inset 0 0 20px rgba(0,0,0,0.5), 0 0 15px rgba(212, 175, 55, 0.2);
-        }
-
-        .admin-header {
-            font-family: 'Special Elite', cursive;
-            color: var(--gold);
-            text-align: center;
-            border-bottom: 1px solid var(--gold);
-            margin-bottom: 20px;
-            padding-bottom: 10px;
-            font-size: 24px;
-            text-transform: uppercase;
-        }
-
-        /* Tabela de Atributos */
-        .char-grid-header {
-            display: grid;
-            grid-template-columns: 120px 180px 180px 180px 40px;
-            gap: 15px;
-            margin-bottom: 10px;
-            font-weight: bold;
-            color: #888;
-            font-size: 12px;
-            text-transform: uppercase;
-            text-align: center;
-        }
-
-        .char-row { 
-            display: grid;
-            grid-template-columns: 120px 180px 180px 180px 40px;
-            gap: 15px;
-            background: rgba(255,255,255,0.03);
-            padding: 10px;
-            margin-bottom: 8px;
-            align-items: center;
-            border-radius: 4px;
-            transition: background 0.2s;
-        }
-
-        .char-row:hover { background: rgba(255,255,255,0.07); }
-
-        .name-cell { 
-            font-family: 'Special Elite', cursive;
-            color: var(--gold);
-            font-size: 18px;
-        }
-
+        .char-grid-header { display: grid; grid-template-columns: 120px 180px 180px 180px 40px; gap: 15px; margin-bottom: 10px; font-weight: bold; color: #888; font-size: 11px; text-transform: uppercase; text-align: center; }
+        .char-row { display: grid; grid-template-columns: 120px 180px 180px 180px 40px; gap: 15px; background: rgba(255,255,255,0.03); padding: 10px; margin-bottom: 8px; align-items: center; border-radius: 4px; }
+        
+        .name-cell { font-family: 'Special Elite', cursive; color: var(--gold); font-size: 18px; }
         .stat-group { display: flex; align-items: center; justify-content: center; gap: 5px; }
 
-        input[type="number"] { 
-            background: #222; 
-            color: white; 
-            border: 1px solid #444; 
-            width: 55px; 
-            padding: 6px; 
-            text-align: center; 
-            font-size: 16px;
-            border-radius: 3px;
-            outline: none;
-            font-family: 'Inter', sans-serif;
-        }
-
-        input[type="number"]:focus { border-color: var(--gold); }
-
-        /* Cores específicas para inputs */
+        input[type="number"] { background: #222; color: white; border: 1px solid #444; width: 55px; padding: 6px; text-align: center; font-size: 16px; border-radius: 3px; outline: none; }
         .in-pv { border-bottom: 2px solid var(--pv) !important; }
         .in-pe { border-bottom: 2px solid var(--pe) !important; }
         .in-ia { border-bottom: 2px solid var(--ia) !important; }
-
+        
+        .max-label { font-size: 14px; color: #aaa; font-weight: bold; width: 55px; text-align: center; }
         .separator { font-weight: bold; color: #555; }
-
-        input[type="checkbox"] {
-            transform: scale(1.4);
-            accent-color: var(--ia);
-            cursor: pointer;
-        }
-
     </style>
 </head>
 <body>
@@ -142,7 +47,6 @@
 
     <div id="admin">
         <div class="admin-header">Controle de Entidades & Feiticeiros</div>
-        
         <div class="char-grid-header">
             <div>Nome</div>
             <div>Pontos de Vida</div>
@@ -150,8 +54,7 @@
             <div>Integridade da Alma</div>
             <div>IA?</div>
         </div>
-
-        <div id="mestre-lista">Carregando dados da nuvem...</div>
+        <div id="mestre-lista">Carregando dados...</div>
     </div>
 
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
@@ -173,47 +76,39 @@
         db.ref('personagens').on('value', (snapshot) => {
             const data = snapshot.val() || {};
             
-            // HUD OBS
             if (charId && data[charId]) {
                 const s = data[charId];
                 document.getElementById('hud').style.display = 'block';
                 document.getElementById('val-hp').innerText = `${s.hp}/${s.hpM}`;
-                document.getElementById('val-pe').innerText = `${s.pe}/${s.peM || 0}`;
+                document.getElementById('val-pe').innerText = `${s.pe}/${s.peM}`;
                 document.getElementById('soul-box').style.display = s.sIA ? 'block' : 'none';
-                if (s.sIA) document.getElementById('val-ia').innerText = `${s.ia}/${s.iaM || 0}`;
+                if (s.sIA) document.getElementById('val-ia').innerText = `${s.ia}/${s.hpM}`; // IA Máxima = PV Máximo
             }
 
-            // PAINEL ADMIN
             if (isMestre && document.getElementById('mestre-lista').innerHTML.includes('Carregando')) {
                 document.getElementById('admin').style.display = 'block';
                 let html = '';
                 names.forEach(n => {
-                    const d = data[n] || { hp: 10, hpM: 10, pe: 5, peM: 10, ia: 10, iaM: 10, sIA: false };
+                    const d = data[n] || { hp: 10, hpM: 10, pe: 5, peM: 10, ia: 10, sIA: false };
                     html += `
                     <div class="char-row">
                         <div class="name-cell">${n}</div>
-                        
                         <div class="stat-group">
                             <input type="number" class="in-pv" id="hp-${n}" value="${d.hp}" oninput="save('${n}')">
                             <span class="separator">/</span>
                             <input type="number" class="in-pv" id="hpM-${n}" value="${d.hpM}" oninput="save('${n}')">
                         </div>
-
                         <div class="stat-group">
                             <input type="number" class="in-pe" id="pe-${n}" value="${d.pe}" oninput="save('${n}')">
                             <span class="separator">/</span>
-                            <input type="number" class="in-pe" id="peM-${n}" value="${d.peM || 0}" oninput="save('${n}')">
+                            <input type="number" class="in-pe" id="peM-${n}" value="${d.peM}" oninput="save('${n}')">
                         </div>
-
                         <div class="stat-group">
                             <input type="number" class="in-ia" id="ia-${n}" value="${d.ia}" oninput="save('${n}')">
                             <span class="separator">/</span>
-                            <input type="number" class="in-ia" id="iaM-${n}" value="${d.iaM || 0}" oninput="save('${n}')">
+                            <div class="max-label" id="iaM-view-${n}">${d.hpM}</div>
                         </div>
-
-                        <div style="text-align:center">
-                            <input type="checkbox" id="sIA-${n}" ${d.sIA?'checked':''} onchange="save('${n}')">
-                        </div>
+                        <div style="text-align:center"><input type="checkbox" id="sIA-${n}" ${d.sIA?'checked':''} onchange="save('${n}')"></div>
                     </div>`;
                 });
                 document.getElementById('mestre-lista').innerHTML = html;
@@ -221,15 +116,18 @@
         });
 
         function save(n) {
+            const hpMValue = parseInt(document.getElementById(`hpM-${n}`).value) || 0;
             const update = {
                 hp: parseInt(document.getElementById(`hp-${n}`).value) || 0,
-                hpM: parseInt(document.getElementById(`hpM-${n}`).value) || 0,
+                hpM: hpMValue,
                 pe: parseInt(document.getElementById(`pe-${n}`).value) || 0,
                 peM: parseInt(document.getElementById(`peM-${n}`).value) || 0,
                 ia: parseInt(document.getElementById(`ia-${n}`).value) || 0,
-                iaM: parseInt(document.getElementById(`iaM-${n}`).value) || 0,
+                iaM: hpMValue, // Força IA Máxima ser igual ao PV Máximo
                 sIA: document.getElementById(`sIA-${n}`).checked
             };
+            // Atualiza o texto visual da IA Máxima no painel
+            if(document.getElementById(`iaM-view-${n}`)) document.getElementById(`iaM-view-${n}`).innerText = hpMValue;
             db.ref('personagens/' + n).update(update);
         }
     </script>
