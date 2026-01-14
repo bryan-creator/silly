@@ -3,11 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <style>
-        :root { --pv: #ff4d4d; --pe: #4d94ff; --ia: #9933ff; --gold: #d4af37; }
-        /* Reset para o OBS */
+        :root { --pv: #ff4d4d; --pe: #4d94ff; --ia: #9933ff; }
         body { background: transparent; font-family: 'Courier New', Courier, monospace; color: white; margin: 0; padding: 10px; }
         
-        /* HUD OBS - Ajustado para visibilidade máxima */
+        /* HUD OBS - APENAS NÚMEROS */
         #hud { display: none; filter: drop-shadow(2px 2px 4px black); }
         .stat-line { font-size: 28px; font-weight: bold; margin-bottom: 5px; white-space: nowrap; }
         .label-pv { color: var(--pv); }
@@ -15,99 +14,108 @@
         .label-ia { color: var(--ia); }
 
         /* PAINEL MESTRE */
-        #admin { background: #111; border: 3px solid var(--gold); padding: 20px; width: 620px; display: none; color: white; border-radius: 8px; }
-        .char-row { border-bottom: 1px solid #333; padding: 12px 0; display: flex; align-items: center; justify-content: space-between; }
-        input[type="number"] { background: #222; color: white; border: 1px solid var(--gold); width: 55px; padding: 5px; font-size: 16px; text-align: center; }
-        b { font-size: 18px; width: 90px; color: var(--gold); }
+        #admin { background: #111; border: 3px solid #d4af37; padding: 20px; width: 650px; display: none; color: white; border-radius: 8px; }
+        .char-row { border-bottom: 1px solid #333; padding: 10px 0; display: flex; align-items: center; justify-content: space-between; }
+        input[type="number"] { background: #222; color: white; border: 1px solid #d4af37; width: 55px; padding: 5px; text-align: center; }
+        .sync-warning { color: #55ff55; font-size: 12px; margin-bottom: 10px; }
     </style>
 </head>
 <body>
 
     <div id="hud">
         <div class="stat-line"><span class="label-pv">PV:</span> <span id="val-hp">0/0</span></div>
-        <div class="stat-line"><span class="label-pe">PE:</span> <span id="val-pe">0/0</span></div>
+        <div class="stat-line"><span class="label-pe">PE:</span> <span id="val-pe">0</span></div>
         <div id="soul-box" style="display:none">
             <div class="stat-line"><span class="label-ia">IA:</span> <span id="val-ia">0/0</span></div>
         </div>
     </div>
 
     <div id="admin">
-        <h2 style="color:var(--gold); margin-top:0; border-bottom: 2px solid var(--gold); padding-bottom: 10px;">CONTROLE DE STATUS</h2>
+        <h2 style="color:#d4af37; margin-top:0;">MESTRE - CONTROLE CLOUD</h2>
+        <div class="sync-warning" id="sync-status">Conectado à nuvem...</div>
         <div id="mestre-lista"></div>
     </div>
 
     <script>
+        // CONFIGURAÇÃO: Escolha um nome único para sua sala
+        const SALA_ID = "bryan-jjk-secret-99"; 
+        const API_URL = `https://api.keyvalue.xyz/42796e6a/${SALA_ID}`;
+
         const names = ["Saito", "Fokushi", "Shigai", "Umi", "Mitsuya", "Shido"];
         const params = new URLSearchParams(window.location.search);
         const charId = params.get('char');
         const mode = params.get('mode');
 
-        // FUNÇÃO DE CARREGAMENTO E INICIALIZAÇÃO
-        function getGameState() {
-            let saved = localStorage.getItem('rpg_save');
-            let data = saved ? JSON.parse(saved) : {};
-            
-            // Garante que todos os personagens existam no banco de dados
-            names.forEach(n => {
-                if (!data[n]) {
-                    data[n] = { hp: 10, hpM: 10, pe: 5, peM: 5, ia: 100, iaM: 100, sIA: false };
+        let gameState = {};
+
+        // 1. PUXAR DADOS DA NUVEM
+        async function fetchData() {
+            try {
+                const response = await fetch(API_URL);
+                if (response.ok) {
+                    gameState = await response.json();
+                    updateUI();
                 }
-            });
-            return data;
+            } catch (e) { console.log("Erro ao buscar dados"); }
         }
 
-        function draw() {
-            const data = getGameState();
-            
-            // SE FOR MESTRE
-            if (mode === 'admin') {
+        // 2. ENVIAR DADOS PARA A NUVEM
+        async function saveData() {
+            try {
+                await fetch(API_URL, {
+                    method: 'POST',
+                    body: JSON.stringify(gameState)
+                });
+                document.getElementById('sync-status').innerText = "Sincronizado! (OK)";
+            } catch (e) { document.getElementById('sync-status').innerText = "Erro de conexão..."; }
+        }
+
+        function updateUI() {
+            // Se for Mestre (Modo Admin)
+            if (mode === 'admin' && document.getElementById('mestre-lista').innerHTML === "") {
                 document.getElementById('admin').style.display = 'block';
-                if (document.getElementById('mestre-lista').innerHTML === "") {
-                    let h = '';
-                    names.forEach(n => {
-                        const d = data[n];
-                        h += `
-                        <div class="char-row">
-                            <b>${n}</b>
-                            <div>PV <input type="number" id="hp-${n}" value="${d.hp}" oninput="updateData('${n}')">/
-                                   <input type="number" id="hpM-${n}" value="${d.hpM}" oninput="updateData('${n}')"></div>
-                            <div>PE <input type="number" id="pe-${n}" value="${d.pe}" oninput="updateData('${n}')"></div>
-                            <div>IA <input type="number" id="ia-${n}" value="${d.ia}" oninput="updateData('${n}')">
-                                 <input type="checkbox" id="sIA-${n}" ${d.sIA?'checked':''} onchange="updateData('${n}')"></div>
-                        </div>`;
-                    });
-                    document.getElementById('mestre-lista').innerHTML = h;
-                }
+                let h = '';
+                names.forEach(n => {
+                    const d = gameState[n] || { hp: 10, hpM: 10, pe: 5, ia: 10, iaM: 10, sIA: false };
+                    h += `<div class="char-row">
+                        <b>${n}</b>
+                        <div>PV <input type="number" id="hp-${n}" value="${d.hp}" onchange="updateChar('${n}')">/
+                               <input type="number" id="hpM-${n}" value="${d.hpM}" onchange="updateChar('${n}')"></div>
+                        <div>PE <input type="number" id="pe-${n}" value="${d.pe}" onchange="updateChar('${n}')"></div>
+                        <div>IA <input type="number" id="ia-${n}" value="${d.ia}" onchange="updateChar('${n}')">/
+                               <input type="number" id="iaM-${n}" value="${d.iaM}" onchange="updateChar('${n}')">
+                             <input type="checkbox" id="sIA-${n}" ${d.sIA?'checked':''} onchange="updateChar('${n}')"></div>
+                    </div>`;
+                });
+                document.getElementById('mestre-lista').innerHTML = h;
             }
 
-            // SE FOR HUD (OBS)
-            if (charId && data[charId]) {
-                const s = data[charId];
+            // Se for HUD (OBS)
+            if (charId && gameState[charId]) {
+                const s = gameState[charId];
                 document.getElementById('hud').style.display = 'block';
                 document.getElementById('val-hp').innerText = `${s.hp}/${s.hpM}`;
-                document.getElementById('val-pe').innerText = `${s.pe}`; // Apenas número atual de PE
+                document.getElementById('val-pe').innerText = `${s.pe}`;
                 document.getElementById('soul-box').style.display = s.sIA ? 'block' : 'none';
-                if (s.sIA) document.getElementById('val-ia').innerText = `${s.ia}`;
+                if (s.sIA) document.getElementById('val-ia').innerText = `${s.ia}/${s.iaM}`;
             }
         }
 
-        function updateData(n) {
-            let data = getGameState();
-            data[n] = {
-                hp: parseInt(document.getElementById(`hp-${n}`).value) || 0,
-                hpM: parseInt(document.getElementById(`hpM-${n}`).value) || 0,
-                pe: parseInt(document.getElementById(`pe-${n}`).value) || 0,
-                peM: 10,
-                ia: parseInt(document.getElementById(`ia-${n}`).value) || 0,
-                iaM: 100,
+        function updateChar(n) {
+            gameState[n] = {
+                hp: parseInt(document.getElementById(`hp-${n}`).value),
+                hpM: parseInt(document.getElementById(`hpM-${n}`).value),
+                pe: parseInt(document.getElementById(`pe-${n}`).value),
+                ia: parseInt(document.getElementById(`ia-${n}`).value),
+                iaM: parseInt(document.getElementById(`iaM-${n}`).value),
                 sIA: document.getElementById(`sIA-${n}`).checked
             };
-            localStorage.setItem('rpg_save', JSON.stringify(data));
+            saveData();
         }
 
-        // Verifica mudanças a cada 300ms (Mais rápido que antes)
-        setInterval(draw, 300);
-        draw();
+        // Loop de atualização: checa a nuvem a cada 2 segundos
+        setInterval(fetchData, 2000);
+        fetchData();
     </script>
 </body>
 </html>
