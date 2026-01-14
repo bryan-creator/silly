@@ -1,35 +1,156 @@
 <!DOCTYPE html>
-<html>
+<html lang="pt-br">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://fonts.googleapis.com/css2?family=Special+Elite&family=Inter:wght@400;700&display=swap" rel="stylesheet">
     <style>
-        :root { --pv: #ff4d4d; --pe: #4d94ff; --ia: #9933ff; --gold: #d4af37; }
-        body { background: transparent; font-family: 'Courier New', Courier, monospace; color: white; margin: 0; padding: 10px; }
-        
-        /* HUD OBS */
-        #hud { display: none; filter: drop-shadow(2px 2px 4px black); }
-        .stat-line { font-size: 30px; font-weight: bold; margin-bottom: 5px; }
-        .label-pv { color: var(--pv); } .label-pe { color: var(--pe); } .label-ia { color: var(--ia); }
+        :root { 
+            --pv: #ff4d4d; 
+            --pe: #4d94ff; 
+            --ia: #9933ff; 
+            --gold: #d4af37;
+            --bg-dark: #0b0b0b;
+            --panel-bg: #161616;
+        }
 
-        /* PAINEL MESTRE */
-        #admin { background: #111; border: 3px solid var(--gold); padding: 20px; width: 620px; display: none; color: white; border-radius: 8px; }
-        .char-row { border-bottom: 1px solid #333; padding: 10px 0; display: flex; align-items: center; justify-content: space-between; }
-        input[type="number"] { background: #222; color: white; border: 1px solid var(--gold); width: 60px; padding: 5px; text-align: center; font-size: 16px; }
-        b { color: var(--gold); width: 100px; display: inline-block; }
+        body { 
+            background: transparent; 
+            font-family: 'Inter', sans-serif; 
+            color: white; 
+            margin: 0; 
+            padding: 10px; 
+        }
+
+        /* --- ESTILO DO HUD (OBS) --- */
+        #hud { 
+            display: none; 
+            filter: drop-shadow(0 0 8px rgba(0,0,0,0.9));
+            border-left: 4px solid var(--gold);
+            padding-left: 15px;
+        }
+
+        .hud-line { 
+            font-family: 'Special Elite', cursive;
+            font-size: 28px; 
+            font-weight: bold; 
+            margin-bottom: 2px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .label-pv { color: var(--pv); text-shadow: 0 0 10px rgba(255, 77, 77, 0.3); }
+        .label-pe { color: var(--pe); text-shadow: 0 0 10px rgba(77, 148, 255, 0.3); }
+        .label-ia { color: var(--ia); text-shadow: 0 0 10px rgba(153, 51, 255, 0.3); }
+
+        /* --- PAINEL DO MESTRE --- */
+        #admin { 
+            background: var(--panel-bg); 
+            border: 2px solid var(--gold); 
+            padding: 25px; 
+            width: 850px; 
+            display: none; 
+            border-radius: 4px;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.5), 0 0 15px rgba(212, 175, 55, 0.2);
+        }
+
+        .admin-header {
+            font-family: 'Special Elite', cursive;
+            color: var(--gold);
+            text-align: center;
+            border-bottom: 1px solid var(--gold);
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            font-size: 24px;
+            text-transform: uppercase;
+        }
+
+        /* Tabela de Atributos */
+        .char-grid-header {
+            display: grid;
+            grid-template-columns: 120px 180px 180px 180px 40px;
+            gap: 15px;
+            margin-bottom: 10px;
+            font-weight: bold;
+            color: #888;
+            font-size: 12px;
+            text-transform: uppercase;
+            text-align: center;
+        }
+
+        .char-row { 
+            display: grid;
+            grid-template-columns: 120px 180px 180px 180px 40px;
+            gap: 15px;
+            background: rgba(255,255,255,0.03);
+            padding: 10px;
+            margin-bottom: 8px;
+            align-items: center;
+            border-radius: 4px;
+            transition: background 0.2s;
+        }
+
+        .char-row:hover { background: rgba(255,255,255,0.07); }
+
+        .name-cell { 
+            font-family: 'Special Elite', cursive;
+            color: var(--gold);
+            font-size: 18px;
+        }
+
+        .stat-group { display: flex; align-items: center; justify-content: center; gap: 5px; }
+
+        input[type="number"] { 
+            background: #222; 
+            color: white; 
+            border: 1px solid #444; 
+            width: 55px; 
+            padding: 6px; 
+            text-align: center; 
+            font-size: 16px;
+            border-radius: 3px;
+            outline: none;
+            font-family: 'Inter', sans-serif;
+        }
+
+        input[type="number"]:focus { border-color: var(--gold); }
+
+        /* Cores específicas para inputs */
+        .in-pv { border-bottom: 2px solid var(--pv) !important; }
+        .in-pe { border-bottom: 2px solid var(--pe) !important; }
+        .in-ia { border-bottom: 2px solid var(--ia) !important; }
+
+        .separator { font-weight: bold; color: #555; }
+
+        input[type="checkbox"] {
+            transform: scale(1.4);
+            accent-color: var(--ia);
+            cursor: pointer;
+        }
+
     </style>
 </head>
 <body>
 
     <div id="hud">
-        <div class="stat-line"><span class="label-pv">PV:</span> <span id="val-hp">0/0</span></div>
-        <div class="stat-line"><span class="label-pe">PE:</span> <span id="val-pe">0</span></div>
+        <div class="hud-line"><span class="label-pv">PV:</span> <span id="val-hp">0/0</span></div>
+        <div class="hud-line"><span class="label-pe">PE:</span> <span id="val-pe">0/0</span></div>
         <div id="soul-box" style="display:none">
-            <div class="stat-line"><span class="label-ia">IA:</span> <span id="val-ia">0/0</span></div>
+            <div class="hud-line"><span class="label-ia">IA:</span> <span id="val-ia">0/0</span></div>
         </div>
     </div>
 
     <div id="admin">
-        <h2 style="color:var(--gold); margin:0;">MESTRE - CONTROLE GLOBAL</h2>
+        <div class="admin-header">Controle de Entidades & Feiticeiros</div>
+        
+        <div class="char-grid-header">
+            <div>Nome</div>
+            <div>Pontos de Vida</div>
+            <div>Energia Amaldiçoada</div>
+            <div>Integridade da Alma</div>
+            <div>IA?</div>
+        </div>
+
         <div id="mestre-lista">Carregando dados da nuvem...</div>
     </div>
 
@@ -37,7 +158,6 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 
     <script>
-        // CONFIGURAÇÃO DO SEU FIREBASE
         const firebaseConfig = {
             apiKey: "AIzaSyDF3tXgC-nNotrwula1GlvMxx_klHp3wW4",
             databaseURL: "https://rpg-jjk-89f41-default-rtdb.firebaseio.com"
@@ -50,33 +170,50 @@
         const charId = params.get('char');
         const isMestre = params.get('mode') === 'admin';
 
-        // ESCUTA A NUVEM EM TEMPO REAL
         db.ref('personagens').on('value', (snapshot) => {
             const data = snapshot.val() || {};
             
-            // Se for HUD do Personagem no OBS
+            // HUD OBS
             if (charId && data[charId]) {
                 const s = data[charId];
                 document.getElementById('hud').style.display = 'block';
                 document.getElementById('val-hp').innerText = `${s.hp}/${s.hpM}`;
-                document.getElementById('val-pe').innerText = `${s.pe}`;
+                document.getElementById('val-pe').innerText = `${s.pe}/${s.peM || 0}`;
                 document.getElementById('soul-box').style.display = s.sIA ? 'block' : 'none';
-                if (s.sIA) document.getElementById('val-ia').innerText = `${s.ia}/${s.iaM}`;
+                if (s.sIA) document.getElementById('val-ia').innerText = `${s.ia}/${s.iaM || 0}`;
             }
 
-            // Se for Painel de Mestre (Gera os inputs apenas se estiver vazio)
+            // PAINEL ADMIN
             if (isMestre && document.getElementById('mestre-lista').innerHTML.includes('Carregando')) {
                 document.getElementById('admin').style.display = 'block';
                 let html = '';
                 names.forEach(n => {
-                    const d = data[n] || { hp: 10, hpM: 10, pe: 5, ia: 10, iaM: 10, sIA: false };
-                    html += `<div class="char-row">
-                        <b>${n}</b>
-                        <div>PV <input type="number" id="hp-${n}" value="${d.hp}" oninput="save('${n}')">/
-                               <input type="number" id="hpM-${n}" value="${d.hpM}" oninput="save('${n}')"></div>
-                        <div>PE <input type="number" id="pe-${n}" value="${d.pe}" oninput="save('${n}')"></div>
-                        <div>IA <input type="checkbox" id="sIA-${n}" ${d.sIA?'checked':''} onchange="save('${n}')">
-                             <input type="number" id="ia-${n}" value="${d.ia}" oninput="save('${n}')"></div>
+                    const d = data[n] || { hp: 10, hpM: 10, pe: 5, peM: 10, ia: 10, iaM: 10, sIA: false };
+                    html += `
+                    <div class="char-row">
+                        <div class="name-cell">${n}</div>
+                        
+                        <div class="stat-group">
+                            <input type="number" class="in-pv" id="hp-${n}" value="${d.hp}" oninput="save('${n}')">
+                            <span class="separator">/</span>
+                            <input type="number" class="in-pv" id="hpM-${n}" value="${d.hpM}" oninput="save('${n}')">
+                        </div>
+
+                        <div class="stat-group">
+                            <input type="number" class="in-pe" id="pe-${n}" value="${d.pe}" oninput="save('${n}')">
+                            <span class="separator">/</span>
+                            <input type="number" class="in-pe" id="peM-${n}" value="${d.peM || 0}" oninput="save('${n}')">
+                        </div>
+
+                        <div class="stat-group">
+                            <input type="number" class="in-ia" id="ia-${n}" value="${d.ia}" oninput="save('${n}')">
+                            <span class="separator">/</span>
+                            <input type="number" class="in-ia" id="iaM-${n}" value="${d.iaM || 0}" oninput="save('${n}')">
+                        </div>
+
+                        <div style="text-align:center">
+                            <input type="checkbox" id="sIA-${n}" ${d.sIA?'checked':''} onchange="save('${n}')">
+                        </div>
                     </div>`;
                 });
                 document.getElementById('mestre-lista').innerHTML = html;
@@ -88,11 +225,12 @@
                 hp: parseInt(document.getElementById(`hp-${n}`).value) || 0,
                 hpM: parseInt(document.getElementById(`hpM-${n}`).value) || 0,
                 pe: parseInt(document.getElementById(`pe-${n}`).value) || 0,
+                peM: parseInt(document.getElementById(`peM-${n}`).value) || 0,
                 ia: parseInt(document.getElementById(`ia-${n}`).value) || 0,
-                iaM: 10,
+                iaM: parseInt(document.getElementById(`iaM-${n}`).value) || 0,
                 sIA: document.getElementById(`sIA-${n}`).checked
             };
-            db.ref('personagens/' + n).set(update);
+            db.ref('personagens/' + n).update(update);
         }
     </script>
 </body>
