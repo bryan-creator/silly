@@ -2,22 +2,21 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
+    <title>JJK RPG Sync</title>
     <style>
-        :root { --pv: #ff4d4d; --pe: #4d94ff; --ia: #9933ff; }
+        :root { --pv: #ff4d4d; --pe: #4d94ff; --ia: #9933ff; --gold: #d4af37; }
         body { background: transparent; font-family: 'Courier New', Courier, monospace; color: white; margin: 0; padding: 10px; }
         
-        /* HUD OBS - APENAS NÚMEROS */
+        /* HUD OBS */
         #hud { display: none; filter: drop-shadow(2px 2px 4px black); }
-        .stat-line { font-size: 28px; font-weight: bold; margin-bottom: 5px; white-space: nowrap; }
-        .label-pv { color: var(--pv); }
-        .label-pe { color: var(--pe); }
-        .label-ia { color: var(--ia); }
+        .stat-line { font-size: 30px; font-weight: bold; margin-bottom: 5px; }
+        .label-pv { color: var(--pv); } .label-pe { color: var(--pe); } .label-ia { color: var(--ia); }
 
         /* PAINEL MESTRE */
-        #admin { background: #111; border: 3px solid #d4af37; padding: 20px; width: 650px; display: none; color: white; border-radius: 8px; }
+        #admin { background: #111; border: 3px solid var(--gold); padding: 20px; width: 620px; display: none; color: white; border-radius: 8px; }
         .char-row { border-bottom: 1px solid #333; padding: 10px 0; display: flex; align-items: center; justify-content: space-between; }
-        input[type="number"] { background: #222; color: white; border: 1px solid #d4af37; width: 55px; padding: 5px; text-align: center; }
-        .sync-warning { color: #55ff55; font-size: 12px; margin-bottom: 10px; }
+        input[type="number"] { background: #222; color: white; border: 1px solid var(--gold); width: 55px; padding: 5px; text-align: center; }
+        .status-sync { font-size: 10px; color: #888; margin-top: 5px; }
     </style>
 </head>
 <body>
@@ -31,69 +30,58 @@
     </div>
 
     <div id="admin">
-        <h2 style="color:#d4af37; margin-top:0;">MESTRE - CONTROLE CLOUD</h2>
-        <div class="sync-warning" id="sync-status">Conectado à nuvem...</div>
+        <h2 style="color:var(--gold); margin:0 0 10px 0;">PAINEL DE CONTROLE</h2>
         <div id="mestre-lista"></div>
+        <div class="status-sync" id="sync-info">Iniciando sistema...</div>
     </div>
 
     <script>
-        // CONFIGURAÇÃO: Escolha um nome único para sua sala
-        const SALA_ID = "bryan-jjk-secret-99"; 
-        const API_URL = `https://api.keyvalue.xyz/42796e6a/${SALA_ID}`;
+        // ID ÚNICO PARA SUA SALA (Pode mudar se quiser criar outra sala)
+        const SALA_ID = "bryan_jjk_2026_room"; 
+        const API_URL = `https://api.keyvalue.xyz/69b2759d/${SALA_ID}`;
 
         const names = ["Saito", "Fokushi", "Shigai", "Umi", "Mitsuya", "Shido"];
         const params = new URLSearchParams(window.location.search);
         const charId = params.get('char');
-        const mode = params.get('mode');
+        const isMestre = params.get('mode') === 'admin';
 
+        // 1. DADOS INICIAIS (Para não ficar em branco)
         let gameState = {};
+        names.forEach(n => {
+            gameState[n] = { hp: 10, hpM: 10, pe: 5, ia: 10, iaM: 10, sIA: false };
+        });
 
-        // 1. PUXAR DADOS DA NUVEM
-        async function fetchData() {
-            try {
-                const response = await fetch(API_URL);
-                if (response.ok) {
-                    gameState = await response.json();
-                    updateUI();
-                }
-            } catch (e) { console.log("Erro ao buscar dados"); }
-        }
-
-        // 2. ENVIAR DADOS PARA A NUVEM
-        async function saveData() {
-            try {
-                await fetch(API_URL, {
-                    method: 'POST',
-                    body: JSON.stringify(gameState)
-                });
-                document.getElementById('sync-status').innerText = "Sincronizado! (OK)";
-            } catch (e) { document.getElementById('sync-status').innerText = "Erro de conexão..."; }
-        }
-
-        function updateUI() {
-            // Se for Mestre (Modo Admin)
-            if (mode === 'admin' && document.getElementById('mestre-lista').innerHTML === "") {
+        // 2. MOSTRAR A INTERFACE IMEDIATAMENTE
+        function initUI() {
+            if (isMestre) {
                 document.getElementById('admin').style.display = 'block';
-                let h = '';
-                names.forEach(n => {
-                    const d = gameState[n] || { hp: 10, hpM: 10, pe: 5, ia: 10, iaM: 10, sIA: false };
-                    h += `<div class="char-row">
-                        <b>${n}</b>
-                        <div>PV <input type="number" id="hp-${n}" value="${d.hp}" onchange="updateChar('${n}')">/
-                               <input type="number" id="hpM-${n}" value="${d.hpM}" onchange="updateChar('${n}')"></div>
-                        <div>PE <input type="number" id="pe-${n}" value="${d.pe}" onchange="updateChar('${n}')"></div>
-                        <div>IA <input type="number" id="ia-${n}" value="${d.ia}" onchange="updateChar('${n}')">/
-                               <input type="number" id="iaM-${n}" value="${d.iaM}" onchange="updateChar('${n}')">
-                             <input type="checkbox" id="sIA-${n}" ${d.sIA?'checked':''} onchange="updateChar('${n}')"></div>
-                    </div>`;
-                });
-                document.getElementById('mestre-lista').innerHTML = h;
+                renderAdmin();
             }
+            if (charId) {
+                document.getElementById('hud').style.display = 'block';
+                updateHUD();
+            }
+        }
 
-            // Se for HUD (OBS)
+        function renderAdmin() {
+            let h = '';
+            names.forEach(n => {
+                const d = gameState[n];
+                h += `<div class="char-row">
+                    <b style="width:80px">${n}</b>
+                    <div>PV <input type="number" id="hp-${n}" value="${d.hp}" oninput="change('${n}')">/
+                           <input type="number" id="hpM-${n}" value="${d.hpM}" oninput="change('${n}')"></div>
+                    <div>PE <input type="number" id="pe-${n}" value="${d.pe}" oninput="change('${n}')"></div>
+                    <div>IA <input type="number" id="ia-${n}" value="${d.ia}" oninput="change('${n}')">
+                         <input type="checkbox" id="sIA-${n}" ${d.sIA?'checked':''} onchange="change('${n}')"></div>
+                </div>`;
+            });
+            document.getElementById('mestre-lista').innerHTML = h;
+        }
+
+        function updateHUD() {
             if (charId && gameState[charId]) {
                 const s = gameState[charId];
-                document.getElementById('hud').style.display = 'block';
                 document.getElementById('val-hp').innerText = `${s.hp}/${s.hpM}`;
                 document.getElementById('val-pe').innerText = `${s.pe}`;
                 document.getElementById('soul-box').style.display = s.sIA ? 'block' : 'none';
@@ -101,21 +89,43 @@
             }
         }
 
-        function updateChar(n) {
-            gameState[n] = {
-                hp: parseInt(document.getElementById(`hp-${n}`).value),
-                hpM: parseInt(document.getElementById(`hpM-${n}`).value),
-                pe: parseInt(document.getElementById(`pe-${n}`).value),
-                ia: parseInt(document.getElementById(`ia-${n}`).value),
-                iaM: parseInt(document.getElementById(`iaM-${n}`).value),
-                sIA: document.getElementById(`sIA-${n}`).checked
-            };
-            saveData();
+        // 3. SINCRONIA COM A NUVEM
+        async function cloudSave() {
+            try {
+                await fetch(API_URL, { method: 'POST', body: JSON.stringify(gameState) });
+                document.getElementById('sync-info').innerText = "Nuvem: Sincronizado às " + new Date().toLocaleTimeString();
+            } catch (e) { document.getElementById('sync-info').innerText = "Nuvem: Erro ao salvar..."; }
         }
 
-        // Loop de atualização: checa a nuvem a cada 2 segundos
-        setInterval(fetchData, 2000);
-        fetchData();
+        async function cloudLoad() {
+            try {
+                const res = await fetch(API_URL);
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data && typeof data === 'object') {
+                        gameState = data;
+                        if (!isMestre) updateHUD(); // HUD só atualiza se não for o mestre editando
+                    }
+                }
+            } catch (e) { console.log("Erro no load"); }
+        }
+
+        function change(n) {
+            gameState[n] = {
+                hp: parseInt(document.getElementById(`hp-${n}`).value) || 0,
+                hpM: parseInt(document.getElementById(`hpM-${n}`).value) || 0,
+                pe: parseInt(document.getElementById(`pe-${n}`).value) || 0,
+                ia: parseInt(document.getElementById(`ia-${n}`).value) || 0,
+                iaM: 10,
+                sIA: document.getElementById(`sIA-${n}`).checked
+            };
+            cloudSave();
+            updateHUD();
+        }
+
+        // INICIALIZAÇÃO
+        initUI();
+        setInterval(cloudLoad, 1500); // Checa a nuvem a cada 1.5s
     </script>
 </body>
 </html>
