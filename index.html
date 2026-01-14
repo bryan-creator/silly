@@ -4,18 +4,18 @@
     <meta charset="UTF-8">
     <style>
         :root { --pv: #ff4d4d; --pe: #4d94ff; --ia: #9933ff; --gold: #d4af37; }
-        body { background: transparent; font-family: 'Courier New', Courier, monospace; color: white; margin: 0; padding: 10px; }
+        body { background: transparent; font-family: 'Courier New', Courier, monospace; color: white; margin: 0; padding: 10px; overflow: hidden; }
         
-        /* HUD OBS - APENAS NÚMEROS */
-        #hud { display: none; filter: drop-shadow(2px 2px 4px black); }
-        .stat-line { font-size: 32px; font-weight: bold; margin-bottom: 5px; }
+        /* HUD OBS (APENAS NÚMEROS) */
+        #hud { display: none; filter: drop-shadow(2px 2px 3px black); }
+        .stat-line { font-size: 32px; font-weight: bold; margin-bottom: 5px; white-space: nowrap; }
         .label-pv { color: var(--pv); } .label-pe { color: var(--pe); } .label-ia { color: var(--ia); }
 
         /* PAINEL MESTRE */
         #admin { background: #111; border: 3px solid var(--gold); padding: 20px; width: 620px; display: none; color: white; border-radius: 8px; }
         .char-row { border-bottom: 1px solid #333; padding: 10px 0; display: flex; align-items: center; justify-content: space-between; }
-        input[type="number"] { background: #222; color: white; border: 1px solid var(--gold); width: 60px; padding: 5px; text-align: center; font-size: 16px; }
-        b { color: var(--gold); width: 100px; display: inline-block; }
+        input[type="number"] { background: #222; color: white; border: 1px solid var(--gold); width: 65px; padding: 5px; text-align: center; font-size: 16px; }
+        b { color: var(--gold); font-size: 18px; width: 100px; display: inline-block; }
     </style>
 </head>
 <body>
@@ -31,7 +31,7 @@
     <div id="admin">
         <h2 style="color:var(--gold); margin:0 0 10px 0;">PAINEL DE CONTROLE JJK</h2>
         <div id="mestre-lista"></div>
-        <button onclick="resetaTudo()" style="margin-top:15px; background:red; color:white; border:none; padding:5px; cursor:pointer;">RESETAR TUDO (10/10)</button>
+        <button onclick="resetaTudo()" style="margin-top:15px; background:#444; color:white; border:1px solid var(--gold); padding:5px; cursor:pointer;">RESTAURAR PADRÃO (10/10)</button>
     </div>
 
     <script>
@@ -40,9 +40,9 @@
         const charId = params.get('char');
         const isMestre = params.get('mode') === 'admin';
 
-        // 1. CARREGAR DADOS (Busca o que está salvo ou cria novos)
+        // Carrega dados ou cria novos SEM SOBRESCREVER
         function loadData() {
-            const saved = localStorage.getItem('rpg_data_jjk');
+            const saved = localStorage.getItem('rpg_data_v1');
             if (saved) return JSON.parse(saved);
             
             let initial = {};
@@ -52,9 +52,8 @@
 
         let gameState = loadData();
 
-        // 2. ATUALIZAR A TELA
-        function refreshUI() {
-            gameState = loadData(); // Recarrega do banco local
+        function refreshHUD() {
+            gameState = loadData();
             if (charId && gameState[charId]) {
                 const s = gameState[charId];
                 document.getElementById('hud').style.display = 'block';
@@ -65,7 +64,6 @@
             }
         }
 
-        // 3. DESENHAR O PAINEL DO MESTRE
         function renderAdmin() {
             if (!isMestre) return;
             document.getElementById('admin').style.display = 'block';
@@ -74,18 +72,17 @@
                 const d = gameState[n];
                 html += `<div class="char-row">
                     <b>${n}</b>
-                    <div>PV <input type="number" id="hp-${n}" value="${d.hp}" oninput="save('${n}')">/
-                           <input type="number" id="hpM-${n}" value="${d.hpM}" oninput="save('${n}')"></div>
-                    <div>PE <input type="number" id="pe-${n}" value="${d.pe}" oninput="save('${n}')"></div>
-                    <div>IA <input type="number" id="ia-${n}" value="${d.ia}" oninput="save('${n}')">
-                         <input type="checkbox" id="sIA-${n}" ${d.sIA?'checked':''} onchange="save('${n}')"></div>
+                    <div>PV <input type="number" id="hp-${n}" value="${d.hp}" oninput="update('${n}')">/
+                           <input type="number" id="hpM-${n}" value="${d.hpM}" oninput="update('${n}')"></div>
+                    <div>PE <input type="number" id="pe-${n}" value="${d.pe}" oninput="update('${n}')"></div>
+                    <div>IA <input type="checkbox" id="sIA-${n}" ${d.sIA?'checked':''} onchange="update('${n}')">
+                         <input type="number" id="ia-${n}" value="${d.ia}" oninput="update('${n}')"></div>
                 </div>`;
             });
             document.getElementById('mestre-lista').innerHTML = html;
         }
 
-        // 4. SALVAR DADOS
-        function save(n) {
+        function update(n) {
             gameState[n] = {
                 hp: parseInt(document.getElementById(`hp-${n}`).value) || 0,
                 hpM: parseInt(document.getElementById(`hpM-${n}`).value) || 0,
@@ -94,29 +91,27 @@
                 iaM: 10,
                 sIA: document.getElementById(`sIA-${n}`).checked
             };
-            localStorage.setItem('rpg_data_jjk', JSON.stringify(gameState));
-            
-            // Avisa outras abas (Opera/Chrome)
-            window.dispatchEvent(new Event('storage')); 
+            localStorage.setItem('rpg_data_v1', JSON.stringify(gameState));
+            refreshHUD(); // Atualiza localmente
         }
 
         function resetaTudo() {
-            localStorage.removeItem('rpg_data_jjk');
-            location.reload();
+            if(confirm("Deseja resetar todos os números?")) {
+                localStorage.removeItem('rpg_data_v1');
+                location.reload();
+            }
         }
 
-        // 5. SINCRONIA MÁGICA (Ouvinte de abas)
-        window.addEventListener('storage', () => {
-            refreshUI();
-        });
-
-        // Inicialização
-        refreshUI();
-        renderAdmin();
+        // ESCUTA MUDANÇAS DE OUTRAS ABAS
+        window.addEventListener('storage', refreshHUD);
         
-        // Backup: Força atualização a cada 1 segundo caso o evento falhe
-        setInterval(refreshUI, 1000);
+        // INÍCIO
+        refreshHUD();
+        renderAdmin();
+        // Backup: Atualiza a cada 500ms caso o evento de storage falhe
+        setInterval(refreshHUD, 500);
     </script>
 </body>
 </html>
+
 
